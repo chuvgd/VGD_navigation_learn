@@ -1,0 +1,8 @@
+.marscode
+# *.pdf
+.vscode
+tmp
+build
+.claude
+library
+learn_Behaviortree
