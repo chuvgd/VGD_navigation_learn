@@ -11,12 +11,15 @@ set(INSTALL_STATIC_LIB_DIR ${PROJECT_SOURCE_DIR}/install/static)
 
 add_library(add SHARED ${SRC}/add.cpp)
 target_include_directories(add PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+add_library(add1 STATIC ${SRC}/add.cpp)
+target_include_directories(add1 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_executable(myapp main.cpp)
-target_link_libraries(myapp PRIVATE add)
-set_target_properties(myapp PROPERTIES INSTALL_RPATH ${INSTALL_SHARED_LIB_DIR})
+target_link_libraries(myapp PRIVATE add1)
+# set_target_properties(myapp PROPERTIES INSTALL_RPATH ${INSTALL_SHARED_LIB_DIR})
 
-install(TARGETS myapp add
+install(TARGETS myapp add add1
         RUNTIME DESTINATION ${INSTALL_BIN_DIR}
-        LIBRARY DESTINATION ${INSTALL_SHARED_LIB_DIR})
+        LIBRARY DESTINATION ${INSTALL_SHARED_LIB_DIR}
+        ARCHIVE DESTINATION ${INSTALL_STATIC_LIB_DIR})
 
