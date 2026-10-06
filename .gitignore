@@ -6,3 +6,6 @@ build
 .claude
 library
 learn_Behaviortree
+bin
+lib
+install

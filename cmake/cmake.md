@@ -500,3 +500,59 @@ add_library(lib_name STATIC/SHARED src.cpp)
 - STATIC：静态库  /  SHARED：动态库（共享库）
 - src.cpp：对于生成库文件相关的源文件，可以是1个也可以是多个
 
+## 十二. CMake编译模式
+
+cpp通常需要区分调试版本(debug)和发布版本(Release)，cmake通过```CMAKE_BUILD_TYPE```控制
+
+### 1. Debug模式和Release模式
+
+- Debug：
+  - 包含调试信息，体积较大，一般不进行激进优化，便于单步调试
+  - Linux下生成elf可执行文件（以及调试符号）
+- Relese：
+  - 侧重优化，代码体积和运行速度更优，一般不包含调试符号
+
+### 2. 在CMake中设置编译模式
+
+通过CMAKE_BUILD_TYPE指定：
+
+#### 命令行指定
+
+```shell
+cmake -DCMAKE_BUILD_TYPE = Debug
+cmake -B build
+
+cmake -DCMAKE_BUILD_TYPE = Release
+cmake -B build
+```
+
+#### 在CMakeLists.txt中指定默认值
+
+```cmake
+#若用户未指定，则默认为DEBUG；用户可通过-D覆盖
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE Debug)
+endif()
+#或者直接set变量写死
+#set(CMAKE_BUILD_TYPE Release)
+#不推荐
+```
+
+### 3.其他构建类型
+
+除了```DEBUG```，```RELEASE```之外，cmake还常用于：
+
+- RelWithDebInfo：带有调试信息的Release风格优化
+- MinSizeRel：最小体积优化
+
+对应变量：```CMAKE_CXX_FLAGS_RELWITHDEBINFO```，```CMAKE_CXX_FLAGS_MINSIZEREL```等
+
+### 4. 检查是否有调试信息
+
+Linux下可以用```readelf```来看可执行文件是否包含调试段
+
+```shell
+readelf -S <bin目录像>/myapp | grep debug
+```
+
+若有```.debug_info```，```.debug_line```等段，说明包含调试信息，而```Release```构建通常没有
