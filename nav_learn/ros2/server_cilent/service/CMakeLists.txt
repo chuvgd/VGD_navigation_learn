@@ -1,14 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(cpp_pubsub)
-
-# find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(std_msgs REQUIRED)
-
-add_executable(talker src/publisher_member_function.cpp)
-add_executable(listener src/subscribe_member_function.cpp)
-ament_target_dependencies(talker rclcpp std_msgs)
-ament_target_dependencies(listener rclcpp std_msgs)
+project(service)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -16,9 +7,16 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(example_interfaces REQUIRED)
+find_package(rclcpp REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
+
+add_executable(server src/add_two_ints_server.cpp)
+ament_target_dependencies(server example_interfaces rclcpp)
+add_executable(client src/add_two_ints_client.cpp)
+ament_target_dependencies(client example_interfaces rclcpp)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -33,10 +31,10 @@ if(BUILD_TESTING)
 endif()
 
 install(TARGETS
-        talker
-        listener
-        DESTINATION 
-        lib/${PROJECT_NAME}  
-)
+        server
+        client
+        DESTINATION
+        lib/${PROJECT_NAME}
+        )
 
 ament_package()
