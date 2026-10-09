@@ -189,4 +189,4 @@ if (rclcpp::spin_until_future_complete(node, result) ==
     RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Failed to call service add_two_ints");
   }
 ```
-
+**注意: 和topic一样在服务通信中，也要保证客户端和服务端的名称一致且消息类型一致**
