@@ -13,8 +13,12 @@ find_package(rclcpp REQUIRED)
 # find_package(<dependency> REQUIRED)
 
 
-add_executable(cpp_paramters_node src/cpp_paramters_node.cpp)
+add_executable(cpp_paramters_node src/cpp_parameters_node.cpp)
+add_executable(cpp_paramters src/cpp_parameters.cpp)
+add_executable(cpp_parameters_description src/cpp_parameters_description.cpp)
 ament_target_dependencies(cpp_paramters_node rclcpp)
+ament_target_dependencies(cpp_paramters rclcpp)
+ament_target_dependencies(cpp_parameters_description rclcpp)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -30,6 +34,8 @@ endif()
 
 install(TARGETS
         cpp_paramters_node
+        cpp_paramters
+        cpp_parameters_description
         DESTINATION
         lib/${PROJECT_NAME}
         )
