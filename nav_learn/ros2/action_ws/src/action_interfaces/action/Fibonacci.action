@@ -1,0 +1,8 @@
+# Request 请求
+int32 order
+---
+# Result 结果
+int32[] sequence
+---
+# Feedback 反馈
+int32[] partial_sequence
