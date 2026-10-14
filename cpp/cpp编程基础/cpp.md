@@ -2022,5 +2022,59 @@ int main(){
 2.参数类型不一致，所以也就是不同的
 ```
 
+### 3. typename关键字
 
+- 声明模板中的类型参数（常见）
+
+- **指明依赖名称是一个类型（关键）**
+
+#### 1. 声明模板类型参数
+
+```cpp
+template<typename T>
+class VGD{
+    T data;
+};
+```
+
+- 这里```class```和```typename```在此处完全等价
+- 但是更推荐```typename```
+
+#### 2. 指明依赖名称是类型
+
+##### 2.1 依赖名称
+
+在模板中，如果一个名称依赖于模板参数，就称为依赖名称
+
+```cpp
+template<typename T>
+void foo(){
+    T::value_type x; //T::value_type依赖于T
+    //error
+}
+```
+
+原因是：**不知道T具体类型**
+
+而对于编译器而言会默认假设依赖名称不是类型（当作值处理）
+
+```cpp
+template<typename T>
+void foo(const T& a){
+    //true
+    typename T::value_type val = *a.begin();
+}
+```
+
+**注意：在依赖于模板参数时必须使用typename**
+
+但是：
+
+```cpp
+template<typename T>
+class Derived ：public T::nested_type VGD{
+  // ...  
+};
+//这里编译器已经知道T::nested_type是类型了
+```
 
