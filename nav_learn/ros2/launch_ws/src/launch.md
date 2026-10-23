@@ -330,3 +330,99 @@ spawn_turtle = ExecuteProcess(
 ros2 launch launch_tutorial example_substitutions.launch.py turtlesim_ns:='turtlesim3' use_provided_red:='True' new_background_r:=200
 ```
 
+
+
+## 使用事件处理器(event handlers)
+
+背景：启动系统是一个执行和管理用户定义进程的系统
+
+负责监视启动的进程的状态，并且报告和响应这些进程状态的变化
+
+这些状态的变化称为事件，可以通过在启动系统值中注册事件处理器(```event handler```)来处理这些事件
+
+事件处理器中可以注册特定事件的处理程序，用于监视进程的状态
+
+详细展开事件处理器机制
+
+```OnProcessStart``` ```OnProcessIO``` ```OnExecutionComplete``` ```OnProcessExit```和```OnShutdown```事件的```RegisterEventHandler```操作在启动描述中已经定义
+
+```python
+RegisterEventHandler(
+    OnProcessStart(
+        target_action=turtlesim_node,
+        on_start=[
+            LogInfo(msg='Turtlesim started, spawning turtle'),
+            spawn_turtle
+        ]
+    )
+),
+```
+
+```OnProcessStart```用于注册一个在```turtlesim```节点启动时执行的回调函数
+
+在节点启动时记录一条消息到控制台，并在节点启动时运行```spawn_turtle```的```action```
+
+```python
+RegisterEventHandler(
+    OnProcessIO(
+        target_action=spawn_turtle,
+        on_stdout=lambda event: LogInfo(
+            msg='Spawn request says "{}"'.format(
+                event.text.decode().strip())
+        )
+    )
+),
+```
+
+```OnProcessIO```用于注册一个在```spawn_turtle```的```action```向其标准输出写数据时执行的回调函数，它记录了生成请求的结果
+
+```python
+
+RegisterEventHandler(
+    OnExecutionComplete(
+        target_action=spawn_turtle,
+        on_completion=[
+            LogInfo(msg='Spawn finished'),
+            change_background_r,
+            TimerAction(
+                period=2.0,
+                actions=[change_background_r_conditioned],
+            )
+        ]
+    )
+),
+```
+
+```OnExecutionComplete```用于注册一个在```spawn_turtle```的```action```完成时的回调函数，记录一条消息到控制台，并在```action```完成时执行```change_background_r```和```change_background_r_conditioned```这俩个```action```
+
+```python
+RegisterEventHandler(
+    OnProcessExit(
+        target_action=turtlesim_node,
+        on_exit=[
+            LogInfo(msg=(EnvironmentVariable(name='USER'),
+                    ' closed the turtlesim window')),
+            EmitEvent(event=Shutdown(
+                reason='Window closed'))
+        ]
+    )
+),
+```
+
+```OnProcessExit```用于注册一个在节点退出时执行```EmitEvent```的```action```来发出一个```Shutdown```事件，当节点窗口关闭，```launch```进程关闭
+
+```python
+RegisterEventHandler(
+    OnShutdown(
+        on_shutdown=[LogInfo(
+            msg=['Launch was asked to shutdown: ',
+                LocalSubstitution('event.reason')]
+        )]
+    )
+),
+```
+
+最后，```OnShutdown```事件处理器用于注册一个回调函数，在启动文件关闭时执行，记录一条消息到控制台，说明关闭启动文件的原因
+
+
+
