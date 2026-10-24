@@ -426,3 +426,374 @@ RegisterEventHandler(
 
 
 
+## 管理大型项目
+
+管理大型项目：**启动多个启动文件，参数，yaml文件，重映射，命名空间，默认参数和Rivz配置**
+
+这里是一个顶层启动文件，启动两个```turtlesim```模拟器，启动TF广播器和监听器，加载参数并启动```Rviz```相关配置
+
+先来介绍顶层文件
+
+顶层文件：启动其他各个模块功能的启动文件，在不同机器人上运行应用时，只需改变顶层文件的参数即可
+
+```python
+import os
+
+from ament_index_python.packages import get_package_share_directory
+
+from launch import LaunchDescription
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+
+
+def generate_launch_description():
+   turtlesim_world_1 = IncludeLaunchDescription(
+      PythonLaunchDescriptionSource([os.path.join(
+         get_package_share_directory('launch_tutorial'), 'launch'),
+         '/turtlesim_world_1.launch.py'])
+      )
+   turtlesim_world_2 = IncludeLaunchDescription(
+      PythonLaunchDescriptionSource([os.path.join(
+         get_package_share_directory('launch_tutorial'), 'launch'),
+         '/turtlesim_world_2.launch.py'])
+      )
+   broadcaster_listener_nodes = IncludeLaunchDescription(
+      PythonLaunchDescriptionSource([os.path.join(
+         get_package_share_directory('launch_tutorial'), 'launch'),
+         '/broadcaster_listener.launch.py']),
+      launch_arguments={'target_frame': 'carrot1'}.items(),
+      )
+   mimic_node = IncludeLaunchDescription(
+      PythonLaunchDescriptionSource([os.path.join(
+         get_package_share_directory('launch_tutorial'), 'launch'),
+         '/mimic.launch.py'])
+      )
+   fixed_frame_node = IncludeLaunchDescription(
+      PythonLaunchDescriptionSource([os.path.join(
+         get_package_share_directory('launch_tutorial'), 'launch'),
+         '/fixed_broadcaster.launch.py'])
+      )
+   rviz_node = IncludeLaunchDescription(
+      PythonLaunchDescriptionSource([os.path.join(
+         get_package_share_directory('launch_tutorial'), 'launch'),
+         '/turtlesim_rviz.launch.py'])
+      )
+
+   return LaunchDescription([
+      turtlesim_world_1,
+      turtlesim_world_2,
+      broadcaster_listener_nodes,
+      mimic_node,
+      fixed_frame_node,
+      rviz_node
+   ])
+```
+
+ 这个启动文件包含了一系列其他启动文件
+
+启动了两个```turtlesim```模拟器，```tf```广播器，```tf```监听器，模仿器，坐标广播器以及```Rviz```节点
+
+注意：
+
+```
+设计提示：顶层启动文件应该比较简短，引用应用中用到的子程序的启动文件，还包含一些顶层常用的启动参数
+```
+
+```
+设计提示：请注意权衡应用需要多少个顶层启动文件，但是并非所有情况下都是只有一个最顶层的启动文件才是最好的
+```
+
+- 参数
+
+  - 在启动文件中设置参数
+
+  ```python
+  from launch import LaunchDescription
+  from launch.actions import DeclareLaunchArgument
+  from launch.substitutions import LaunchConfiguration, TextSubstitution
+  
+  from launch_ros.actions import Node
+  
+  
+  def generate_launch_description():
+     background_r_launch_arg = DeclareLaunchArgument(
+        'background_r', default_value=TextSubstitution(text='0')
+     )
+     background_g_launch_arg = DeclareLaunchArgument(
+        'background_g', default_value=TextSubstitution(text='84')
+     )
+     background_b_launch_arg = DeclareLaunchArgument(
+        'background_b', default_value=TextSubstitution(text='122')
+     )
+  
+     return LaunchDescription([
+        background_r_launch_arg,
+        background_g_launch_arg,
+        background_b_launch_arg,
+        Node(
+           package='turtlesim',
+           executable='turtlesim_node',
+           name='sim',
+           parameters=[{
+              'background_r': LaunchConfiguration('background_r'),
+              'background_g': LaunchConfiguration('background_g'),
+              'background_b': LaunchConfiguration('background_b'),
+           }]
+        ),
+     ])
+  ```
+
+  这个启动文件启动了```turtlesim_node```节点，启动了```turtlesim```仿真，并传递了定义和传递节点的仿真配置参数
+
+  - 从```yaml```文件中加载参数
+
+   从```yaml```文件加载参数是一个更为合理且工程化的操作
+
+  ```python
+  import os
+  
+  from ament_index_python.packages import get_package_share_directory
+  
+  from launch import LaunchDescription
+  from launch_ros.actions import Node
+  
+  
+  def generate_launch_description():
+     config = os.path.join(
+        get_package_share_directory('launch_tutorial'),
+        'config',
+        'turtlesim.yaml'
+        )
+  
+     return LaunchDescription([
+        Node(
+           package='turtlesim',
+           executable='turtlesim_node',
+           namespace='turtlesim2',
+           name='sim',
+           parameters=[config]
+        )
+     ])
+  ```
+
+  这个启动文件会启动从```yaml```配置文件中加载的参数的```turtlesim_node```，注意这里```yaml```参数文件的路径
+
+  在```yaml```文件中定义参数，可以很容易地存储和加载大量变量
+
+  此外，可以用相关地命令行从```ros2 param```列表中导出```yaml```文件
+
+  这里创建一个名为```turtlesim.yaml```的配置文件，放在包```/config```文件夹中，这个配置文件会被我们启动文件加载
+
+  ```yaml
+  /turtlesim2/sim:
+     ros__parameters:
+        background_b: 255
+        background_g: 86
+        background_r: 150
+  ```
+
+  - 在```yaml```文件中使用通配符
+
+  有时候我们想要在多个节点设置相同的参数，这些节点可能有不同的命名空间或者名称，但是仍然具有相同的参数
+
+  在这种情况下，为不同命名空间和节点名称定义分开的```yaml```文件并不高效
+
+  使用通配符字符，可以在文本值中代替未知字符，以将参数应用于多个不同的节点
+
+  ```yaml
+  /**:
+     ros__parameters:
+        background_b: 255
+        background_g: 86
+        background_r: 150
+  ```
+
+  会给使用这个```yaml```文件的```launch```文件下所有节点设置相关参数
+
+- 命名空间
+
+唯一的命名空间允许系统启动两个相似的节点，而不会出现节点名称或者主题名称冲突
+
+但是如果启动文件包含大量节点，为每个节点定义命名空间会变得比较繁琐，为了解决这个问题，可以使用```PushRosNamespace```动作来为每个启动文件描述定义全局命名空间，这样每个嵌套节点都会自动继承该命名空间
+
+这里举个例子：
+
+```python
+from launch.actions import GroupAction
+from launch_ros.actions import PushRosNamespace
+
+   ...
+   turtlesim_world_2 = IncludeLaunchDescription(
+      PythonLaunchDescriptionSource([os.path.join(
+         get_package_share_directory('launch_tutorial'), 'launch'),
+         '/turtlesim_world_2.launch.py'])
+      )
+   turtlesim_world_2_with_namespace = GroupAction(
+     actions=[
+         PushRosNamespace('turtlesim2'),
+         turtlesim_world_2,
+      ]
+   )
+```
+
+这里就是为了```turtlesim_world_2.launch.py```启动文件中每个节点都会嵌套上```turtlesim2```命名空间
+
+- 复用节点
+
+```python
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
+
+from launch_ros.actions import Node
+
+
+def generate_launch_description():
+   return LaunchDescription([
+      DeclareLaunchArgument(
+         'target_frame', default_value='turtle1',
+         description='Target frame name.'
+      ),
+      Node(
+         package='turtle_tf2_py',
+         executable='turtle_tf2_broadcaster',
+         name='broadcaster1',
+         parameters=[
+            {'turtlename': 'turtle1'}
+         ]
+      ),
+      Node(
+         package='turtle_tf2_py',
+         executable='turtle_tf2_broadcaster',
+         name='broadcaster2',
+         parameters=[
+            {'turtlename': 'turtle2'}
+         ]
+      ),
+      Node(
+         package='turtle_tf2_py',
+         executable='turtle_tf2_listener',
+         name='listener',
+         parameters=[
+            {'target_frame': LaunchConfiguration('target_frame')}
+         ]
+      ),
+   ])
+```
+
+这个文件中，我们声明了```target_frame```启动参数，并设置了默认值为```turtle```，这个参数值可以进行修改，若没有修改则传递默认值
+
+使用不同的名称和参数启动```turtle_tf2_broadcaster```节点两次，这样可以做到不冲突
+
+同时我们再启动一个```turtle_tf2_listener```节点，并设置```target_frame```参数为前面声明和获取的
+
+- 参数覆盖
+
+在顶层文件中，传递了```target_frame```启动参数
+
+```python
+broadcaster_listener_nodes = IncludeLaunchDescription(
+   PythonLaunchDescriptionSource([os.path.join(
+      get_package_share_directory('launch_tutorial'), 'launch'),
+      '/broadcaster_listener.launch.py']),
+   launch_arguments={'target_frame': 'carrot1'}.items(),
+   )
+```
+
+调用了```broadcaster_listener.launch.py```文件并将默认设置的目标坐标系更改为```carrot1```
+
+- 重映射
+
+```python
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+
+def generate_launch_description():
+   return LaunchDescription([
+      Node(
+         package='turtlesim',
+         executable='mimic',
+         name='mimic',
+         remappings=[
+            ('/input/pose', '/turtle2/pose'),
+            ('/output/cmd_vel', '/turtlesim2/turtle1/cmd_vel'),
+         ]
+      )
+   ])
+```
+
+这个启动文件会启动```mimic```节点，该节点会给一个```turtlesim```发送命令，让其跟随另一个```turtlesim```，这里就是在```/input/pose```话题上接收目标姿态，我们将```/turtle2/pose```话题重映射目标姿态
+
+同时将```/output/cmd_vel```话题重映射到```/turtlesim2/turtle1/cmd_vel```
+
+这样就可以做到在```turtlesim2```中的```turtle1```跟随初始```turtlesim```中的```turtle2```
+
+- 配置文件
+
+```python
+import os
+
+from ament_index_python.packages import get_package_share_directory
+
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+
+def generate_launch_description():
+   rviz_config = os.path.join(
+      get_package_share_directory('turtle_tf2_py'),
+      'rviz',
+      'turtle_rviz.rviz'
+      )
+
+   return LaunchDescription([
+      Node(
+         package='rviz2',
+         executable='rviz2',
+         name='rviz2',
+         arguments=['-d', rviz_config]
+      )
+   ])
+```
+
+这个启动文件会启动```RViz```，使用```turtle_tf2_py```包中定义的配置文件
+
+- 环境变量
+
+```python
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import EnvironmentVariable, LaunchConfiguration
+from launch_ros.actions import Node
+
+
+def generate_launch_description():
+   return LaunchDescription([
+      DeclareLaunchArgument(
+            'node_prefix',
+            default_value=[EnvironmentVariable('USER'), '_'],
+            description='prefix for node name'
+      ),
+      Node(
+            package='turtle_tf2_py',
+            executable='fixed_frame_tf2_broadcaster',
+            name=[LaunchConfiguration('node_prefix'), 'fixed_broadcaster'],
+      ),
+   ])
+```
+
+展示启动文件中调用环境变量，环境变量可以用于定义或者推送命名空间，区分不同计算机或者机器人上的节点
+
+最后在```CMakeLists.txt```中：
+
+```cmake
+install(DIRECTORY 
+        launch 
+        config
+        DESTINATION 
+        share/${PROJECT_NAME}/
+)
+```
+
+将```config```和```launch```文件进行安装
