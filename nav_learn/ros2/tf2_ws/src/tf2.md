@@ -424,3 +424,104 @@ tf_broadcaster_ -> sendTransform(t);
 
 
 
+## 编写监听器
+
+tf2监听器就是获取已经存在的坐标变换，通过监听器我们可以更为灵活地进行其他的坐标变换
+
+这里还是只是对相关代码进行逻辑上解释
+
+头文件部分：
+
+```cpp
+#include "geometry_msgs/msg/transform_stamped.hpp"
+#include "geometry_msgs/msg/twist.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "tf2/exceptions.h"
+#include "tf2_ros/transform_listener.h"
+#include "tf2_ros/buffer.h"
+#include "turtlesim/srv/spawn.hpp"
+```
+
+这里我们需要重点关注的是
+
+```cpp
+#include "tf2_ros/transform_listener.h"
+#include "tf2_ros/buffer.h"
+```
+
+这是监听坐标变换的关键
+
+同时代码实现中还用到了服务通信相关内容，这里不再进行赘述
+
+源文件部分：
+
+先看构造函数
+
+```cpp
+class FrameListener : public rclcpp::Node{
+    public:
+        FrameListener():Node("turtle_tf2_frame_listener"),turtle_spawning_service_ready_(false),turtle_spawned_(false){
+            //declare and acquire 'target_frame' parameter
+            target_frame_ = this -> declare_parameter<std::string>("target_frame","turtle1");
+
+            tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this -> get_clock());
+
+            //定义监听器对turtle1 to turtle2
+            tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
+            //create a client to spawn a turtle
+            spawner_ = this -> create_client<turtlesim::srv::Spawn>("spawn");
+
+            //create a client to a spawn a turtle
+            publisher_ = this -> create_publisher<geometry_msgs::msg::Twist>("turtle2/cmd_vel",1);
+
+            //call on_timer function every second
+            //创建定时器，每1s执行一次回调函数
+            timer_ = this -> create_wall_timer(1s,std::bind(&FrameListener::on_timer,this));
+        }
+```
+
+在构造函数中是本次函数需要执行的完整逻辑，先对父类构造函数进行相关的初始化，然后对成员变量进行初始化，这里是将成员变量赋值为```false```
+
+函数中，我们先对参数变量进行声明和初始化，```target_frame```为```turtle1```
+
+在监听器中，```buffer```和```listener```经常一起进行使用
+
+我们需要创建缓冲区对象
+
+```cpp
+tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this -> get_clock());
+//其构造函数是要传入相关的时间戳
+```
+
+创建监听区对象，并将缓冲区相关内容进行传递
+
+```cpp
+tf_listener_ =
+  std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+//构造函数中指定了所需要传递的参数
+```
+
+一旦监听器被创建，会开始通过线路接收tf2变换，并对这些变换进行缓冲，时间一般是10s
+
+同时我们创建了相关的客户端和发布者，这里不进行这些逻辑上的讲解，只关注相关的监听器
+
+在定时器回调函数中我们创建了需要监听的两个坐标系位置
+
+```cpp
+std::string fromFrameRel = target_frame_.c_str();
+std::string toFrameRel = "turtle2";
+```
+
+调用```lookupTransform```方法进行查询相关坐标变化
+
+注意：```lookupTransform```方法是```geometry_msgs::msg::TransformStamped```数据类型，传入的参数是```目标坐标系``` ```源坐标系``` ```转换的时间```
+
+这里就是从```turtle1```转换到```turtle2```坐标系，同时```tf2::TimePointZero```代表在缓冲区中最新可用的坐标变换（这个涉及到时间戳相关，需要进一步后续内容的学习）
+
+```cpp
+t = tf_buffer_->lookupTransform(
+  toFrameRel, fromFrameRel,
+  tf2::TimePointZero);
+```
+
