@@ -15,6 +15,8 @@ find_package(geometry_msgs REQUIRED)
 add_executable(static_broadcaster_publisher src/static_broadcaster.cpp)
 add_executable(tf2_broadcaster src/tf2_broadcaster.cpp)
 add_executable(tf2_listener src/tf2_listener.cpp)
+add_executable(fixed_frame_tf2_broadcaster src/fixed_frame_tf2_broadcaster.cpp)
+add_executable(dynamic_frame_tf_broadcaster src/dynamic_frame_tf_broadcaster.cpp)
 ament_target_dependencies(
   static_broadcaster_publisher
   geometry_msgs
@@ -38,6 +40,18 @@ ament_target_dependencies(
   tf2
   tf2_ros
 )
+ament_target_dependencies(
+  fixed_frame_tf2_broadcaster
+  geometry_msgs
+  rclcpp
+  tf2_ros
+)
+ament_target_dependencies(
+  dynamic_frame_tf_broadcaster
+  geometry_msgs
+  rclcpp
+  tf2_ros
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -55,6 +69,8 @@ install(TARGETS
         static_broadcaster_publisher
         tf2_broadcaster
         tf2_listener
+        fixed_frame_tf2_broadcaster
+        dynamic_frame_tf_broadcaster
         DESTINATION
         lib/${PROJECT_NAME}
         )

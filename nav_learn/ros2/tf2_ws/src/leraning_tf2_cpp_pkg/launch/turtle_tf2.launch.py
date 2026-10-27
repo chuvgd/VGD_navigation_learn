@@ -28,7 +28,7 @@ def generate_launch_description():
                     executable='tf2_broadcaster',
                     name='broadcaster1',
                     parameters=[
-                        {'turtlename':'turtle2'}
+                        {'turtlename':'turtle3'}
                     ]
                 ),
         Node(

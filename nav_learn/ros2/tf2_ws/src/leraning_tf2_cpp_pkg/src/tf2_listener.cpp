@@ -28,7 +28,7 @@ class FrameListener : public rclcpp::Node{
             spawner_ = this -> create_client<turtlesim::srv::Spawn>("spawn");
 
             //create a client to a spawn a turtle
-            publisher_ = this -> create_publisher<geometry_msgs::msg::Twist>("turtle2/cmd_vel",1);
+            publisher_ = this -> create_publisher<geometry_msgs::msg::Twist>("turtle3/cmd_vel",1);
 
             //call on_timer function every second
             //创建定时器，每1s执行一次回调函数
@@ -39,7 +39,7 @@ class FrameListener : public rclcpp::Node{
         void on_timer(){
             //store frame names in variables that will be used to compute transformation
             std::string fromFrameRel = target_frame_.c_str();
-            std::string toFrameRel = "turtle2";
+            std::string toFrameRel = "turtle3";
 
             if(turtle_spawning_service_ready_){
                 if(turtle_spawned_){
@@ -87,14 +87,14 @@ class FrameListener : public rclcpp::Node{
                     request -> x = 4.0;
                     request -> y = 2.0;
                     request -> theta = 0.0;
-                    request -> name = "turtle2";
+                    request -> name = "turtle3";
                     //发送相关请求
 
                     //call request
                     using ServiceResponseFuture = rclcpp::Client<turtlesim::srv::Spawn>::SharedFuture;
                     auto response_received_callback = [this](ServiceResponseFuture future){
                         auto result = future.get();
-                        if(strcmp(result -> name.c_str(),"turtle2") == 0){
+                        if(strcmp(result -> name.c_str(),"turtle3") == 0){
                             turtle_spawning_service_ready_ = true;
                         }else{
                             RCLCPP_ERROR(this -> get_logger(),"Service callback result mismatch");

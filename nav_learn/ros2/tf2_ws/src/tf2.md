@@ -525,3 +525,130 @@ t = tf_buffer_->lookupTransform(
   tf2::TimePointZero);
 ```
 
+这里对```tf```时间戳方面进行进一步的讲解，对于在```tf```中，```tf2::TimePointZero```表示缓冲区中最新可用的变换
+
+但是如果直接用
+
+```cpp
+rclcpp::Time now = this -> get_clock()->now();
+transformStamped = tf_buffer_ -> lookupTransform(
+	toFrameRel,
+    fromFrameRel,
+    now
+);
+```
+
+会出现这样的报错：
+
+```shell
+[INFO] [1629873136.345688064] [listener]: Could not transform turtle2 to turtle1: Lookup would
+require extrapolation into the future.  Requested time 1629873136.345539 but the latest data
+is at time 1629873136.338804, when looking up transform from frame [turtle1] to frame [turtle2]
+```
+
+会直接说没有相关的坐标变换，或者数据发生在未来
+
+这是因为每个监听器都会有相关的缓冲区，存储来自不同广播器的所有坐标变换
+
+从广播器到进入缓冲区需要一段时间，所以请求现在的坐标变换需要等待该变换进入缓冲区
+
+还有一个方式就是加超时参数，从```now```加超时参数等待进入缓冲区，官方示例给了```50ms```
+
+这里具体调试可以查看相关时间戳的报错，然后使用
+
+```shell
+ros2 run tf2_ros tf2_monitor turtle2 turtle1
+```
+
+会在终端输出：
+
+```shell
+RESULTS: for turtle2 to turtle1
+Chain is: turtle1
+Net delay     avg = 0.00287347: max = 0.0167241
+
+Frames:
+Frame: turtle1, published by <no authority available>, Average Delay: 0.000295833, Max Delay: 0.000755072
+
+All Broadcasters:
+Node: <no authority available> 125.246 Hz, Average Delay: 0.000290237 Max Delay: 0.000786781
+```
+
+这里会输出显示```turtle2```到```turtle1```的坐标变换平均延迟为3ms
+
+具体代码可以使用：
+
+```cpp
+try{
+    transformStamped = tf_buffer_ -> lookupTransform(
+    	toFrameRel,
+        fromFrameRel,
+        this -> now() - rclcpp::Duration::from_seconds(0.1)
+    );
+}catch(tf2::TransformException& ex)
+```
+
+具体可以查看相关教程：[ros2-humble-tf超时教程](https://ros2docs.robook.org/humble/Tutorials/Intermediate/Tf2/Debugging-Tf2-Problems.html)
+
+
+
+## 四元数
+
+这里额外讲解一下在坐标变换中经常用到的四元数部分
+
+```cpp
+#include <tf2_geometry_msgs/tf2_geometry_msg.hpp>
+
+...
+tf2::Quaternion tf2_quat,tf2_quat_from_msg;
+tf2_quat.setRPY(roll,pitch,yaw);
+//convert tf2::Quaternion to geometry_msgs::msg::Quaternion
+geometry_msgs::msg::Quaternion msg_quat = tf2::toMsg(tf2_quat);
+
+//convert geometry_msgs::msg::Quaternion to tf2::Quaternion
+tf2::convert(msg_quat,tf2_quat_from_msg);
+//or
+tf2::fromMsg(msg_quat,tf2_quat_from_msg);
+```
+
+有关操作：
+
+- 从rpy转换成四元数
+
+```cpp
+tf2::Quaternion q;
+q.setRPY(0.0,0.0,0.0);
+```
+
+- 四元数旋转
+
+```cpp
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+...
+tf2::Quaternion q_orig,q_rot,q_new;
+
+q_orig.setRPY(0.0,0.0,0.0);
+q_rot.setRPY(3.14,0.0,0.0);
+q_new = q.rot * q_orig;
+q_new.normalize();
+```
+
+- 四元数反转
+
+逆四元数一个简单的方法是取反w分量
+
+```cpp
+q[3] = -q[3];
+```
+
+- 相似旋转
+
+这里假设在```q_2```和```q_1```空间下的旋转```q_r```
+
+**右乘矩阵的取反**
+
+```cpp
+q_2 = q_r * q_1;
+q_r = q_2 * q_1_inverse;
+```
+
