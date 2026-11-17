@@ -1,0 +1,21 @@
+<root>
+    <BehaviorTree ID="SubTreeA">
+        <SaySomething message="Executing Sub_A"/>
+    </BehaviorTree>
+</root>
+
+<root>
+    <BehaviorTree ID="SubTreeB">
+        <SaySomething message="Executing Sub_B"/>
+    </BehaviorTree>
+</root>
+
+<root>
+    <BehaviorTree ID="MainTree">
+        <Sequence>
+            <SaySomething message="starting MainTree"/>
+            <SubTree ID="SubTreeA"/>
+            <SubTree ID="SubTreeB"/>
+        </Sequence>
+    </BehaviorTree>
+</root>

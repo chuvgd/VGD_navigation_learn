@@ -1,0 +1,24 @@
+<root>
+    <BehaviorTree ID="SubTreeA">
+        <SaySomething message="Executing Sub_A"/>
+    </BehaviorTree>
+</root>
+
+<root>
+    <BehaviorTree ID="SubTreeB">
+        <SaySomething message="Executing Sub_B"/>
+    </BehaviorTree>
+</root>
+
+<root BTCPP_format="4">
+    <include path="./subtree_A.xml"/>
+    <include path="./subtree_B.xml"/>
+    <!-- 通过include可以直接直接注册一个主树进行创建 -->
+    <BehaviorTree ID="MainTree">
+        <Sequence>
+            <SaySomething message="starting MainTree"/>
+            <SubTree ID="SubTreeA"/>
+            <SubTree ID="SubTreeB"/>
+        </Sequence>
+    </BehaviorTree>
+</root>
